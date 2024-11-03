@@ -32,7 +32,7 @@ def download_data_openpowerlifting_lifter(
         print(f"An error occurred when downloading the archive file: {e}")
 
     try:
-        # Find the data file inside the archive file
+        # Extract the data file from the archive file
         with ZipFile(zip_filename, "r") as z:
             csv_filename_in_archive = [x for x in z.namelist() if os.path.splitext(x)[-1] == ".csv"][0]
             print(f"Data found at: {csv_filename_in_archive}")
@@ -46,13 +46,20 @@ def download_data_openpowerlifting_lifter(
             with open(csv_temp_filename, "wb") as f:
                 f.write(z.read(csv_filename_in_archive))
                 print(f"Data extracted to: {csv_temp_filename}")
+                return (csv_temp_filename, download_timestamp)
     except Exception as e:
         print(f"An error occurred when extracting the data file from the archive file: {e}")
-    
+
+def parse_data_file_to_csv(
+    csv_temp_filename: str,
+    download_timestamp: pd.Timestamp = None
+):
     try:
         # Add downloaded_at column and save to csv
         df = pd.read_csv(csv_temp_filename, dtype=str)
         df['downloaded_at'] = download_timestamp
+        print(f"Column added to the data: downloaded_at")
+        csv_basename = os.path.basename(csv_temp_filename)
         csv_filename = os.path.join(
             ".",
             "data",
@@ -67,7 +74,6 @@ def download_data_openpowerlifting_lifter(
     except Exception as e:
         print(f"An error occurred when parsing the data file: {e}")
         
-
 def upload_file_to_s3(
     local_filename: str, 
     bucket_name: str = "tdouglas-data-prod-useast2"
@@ -82,34 +88,9 @@ def upload_file_to_s3(
         print(f"An error occurred when uploading the file to S3: {e}")
 
 def main():
-    csv_filename = download_data_openpowerlifting_lifter()
+    (csv_temp_filename, download_timestamp) = download_data_openpowerlifting_lifter()
+    csv_filename = parse_data_file_to_csv(csv_temp_filename, download_timestamp)
     upload_file_to_s3(csv_filename)
-    # # Download file from url
-    # url = "https://openpowerlifting.gitlab.io/opl-csv/files/openpowerlifting-latest.zip"
-    # archive_dir = os.path.join(
-    #     ".",
-    #     "data",
-    #     "temp"
-    # )
-    # archive_filename = "openpowerlifting-latest.zip"
-    # # download_file_from_url(url, archive_filename, archive_dir)
-
-    # # Extract data from archive
-    # archive_filepath = os.path.join(archive_dir, archive_filename)
-    # zip_file = ZipFile(archive_filepath, "r")   
-    # extract_dir = os.path.join(
-    #     ".",
-    #     "data",
-    #     "raw",
-    #     "openpowerlifting",
-    #     "lifter"
-    # )
-    # extracted_data_filepath = extract_data_from_archive(zip_file, extract_dir)
-    
-    # Upload the file to S3
-    # bucket_name = "tdouglas-data-prod-useast2"
-    # s3_filename = f"data/raw/openpowerlifting/lifter/{os.path.basename(extracted_data_filepath)}"
-    # upload_file_to_s3(extracted_data_filepath, bucket_name, s3_filename)
 
 if __name__ == "__main__":
     main()
