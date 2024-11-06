@@ -1,5 +1,4 @@
 import os
-import datetime
 import hashlib
 from zipfile import ZipFile
 
@@ -10,7 +9,7 @@ import awswrangler as wr
 
 def download_data_opl_lifter(
     zip_filename: str,
-    url: str = "https://openpowerlifting.gitlab.io/opl-csv/files/openpowerlifting-latest.zip"
+    url: str = "https://openpowerlifting.gitlab.io/opl-csv/files/openpowerlifting-latest.zip",
 ) -> str:
     try:
         # Get a response from the url
@@ -20,16 +19,14 @@ def download_data_opl_lifter(
         print(f"An error occurred when connecting to the website: {e}")
 
     # Save the response as an archive
-    with open(zip_filename, 'wb') as file:
+    with open(zip_filename, "wb") as file:
         for chunk in response.iter_content(chunk_size=8192):
             if chunk:
                 file.write(chunk)
     print(f"Archive saved to: {zip_filename}")
-    
 
-def extract_data_opl_lifter(
-    zip_filename: str
-) -> str:
+
+def extract_data_opl_lifter(zip_filename: str) -> str:
     with ZipFile(zip_filename, "r") as z:
         # Find the data file in the archive
         data_filename_in_archive = [
@@ -40,25 +37,22 @@ def extract_data_opl_lifter(
             "openpowerlifting", "lifter"
         )
         data_temp_filename = os.path.join(os.getcwd(), "data", "temp", data_basename)
-        
+
         # Extract the data file
         with z.open(data_filename_in_archive, "r") as csv_in_zip:
             with open(data_temp_filename, "wb") as f:
                 while True:
                     chunk = csv_in_zip.read(8192)
                     if not chunk:
-                        break 
+                        break
                     f.write(chunk)
     print(f"Data extracted to: {data_temp_filename}")
     return data_temp_filename
 
 
-def add_metadata_columns(
-    filename, 
-    download_timestamp: pd.Timestamp = None
-):
+def add_metadata_columns(filename, download_timestamp: pd.Timestamp = None):
     # Add metadata columns
-    output_filename = filename.replace(".csv","_modified.csv")
+    output_filename = filename.replace(".csv", "_modified.csv")
     chunk_iter = pd.read_csv(filename, dtype=str, chunksize=300000)
     for chunk in chunk_iter:
         chunk["downloaded_at"] = download_timestamp
@@ -73,17 +67,15 @@ def add_metadata_columns(
     print(f"Column added to the data: created_date")
 
 
-def convert_csv_to_parquet(
-    data_temp_filename: str
-) -> str:
+def convert_csv_to_parquet(data_temp_filename: str) -> str:
     # Convert to parquet format
-    df = pd.read_csv(data_temp_filename, dtype=str)
     parquet_basename = (
         f"{os.path.splitext(os.path.basename(data_temp_filename))[0]}.parquet"
     )
     parquet_filename = os.path.join(
         os.getcwd(), "data", "raw", "openpowerlifting", "lifter", parquet_basename
     )
+    df = pd.read_csv(data_temp_filename, dtype=str)
     df.to_parquet(parquet_filename, index=False)
     print(f"Data parsed and saved to: {parquet_filename}")
     return parquet_filename
@@ -103,14 +95,14 @@ def upload_file_to_s3(
     except Exception as e:
         print(f"An error occurred when uploading the file to S3: {e}")
 
-def checksum_file(
-    filename: str
-) -> str:
+
+def checksum_file(filename: str) -> str:
     hash_func = hashlib.new("sha256")
     with open(filename, "rb") as file:
         for chunk in iter(lambda: file.read(8192), b""):
             hash_func.update(chunk)
     return hash_func.hexdigest()
+
 
 def main():
     zip_filename = os.path.join(
