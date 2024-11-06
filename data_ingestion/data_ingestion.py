@@ -1,5 +1,6 @@
 import os
 import hashlib
+import json
 from zipfile import ZipFile
 
 import requests
@@ -7,7 +8,7 @@ import pandas as pd
 import awswrangler as wr
 
 
-def download_data_opl_lifter(
+def download_zip_opl_lifter(
     zip_filename: str,
     url: str = "https://openpowerlifting.gitlab.io/opl-csv/files/openpowerlifting-latest.zip",
 ) -> str:
@@ -67,17 +68,17 @@ def add_metadata_columns(filename, download_timestamp: pd.Timestamp = None):
     print(f"Column added to the data: created_date")
 
 
-def convert_csv_to_parquet(data_temp_filename: str) -> str:
+def convert_csv_to_parquet(data_filename: str) -> str:
     # Convert to parquet format
     parquet_basename = (
-        f"{os.path.splitext(os.path.basename(data_temp_filename))[0]}.parquet"
+        f"{os.path.splitext(os.path.basename(data_filename))[0]}.parquet"
     )
     parquet_filename = os.path.join(
         os.getcwd(), "data", "raw", "openpowerlifting", "lifter", parquet_basename
     )
-    df = pd.read_csv(data_temp_filename, dtype=str)
+    df = pd.read_csv(data_filename, dtype=str)
     df.to_parquet(parquet_filename, index=False)
-    print(f"Data parsed and saved to: {parquet_filename}")
+    print(f"Data converted and saved to: {parquet_filename}")
     return parquet_filename
 
 
@@ -91,12 +92,12 @@ def upload_file_to_s3(
             f"s3://{bucket_name}/data/raw/openpowerlifting/lifter/{local_basename}"
         )
         wr.s3.upload(local_filename, s3_path)
-        print(f"File uploaded to: {s3_path}")
+        print(f"File {local_filename} uploaded to {s3_path}")
     except Exception as e:
         print(f"An error occurred when uploading the file to S3: {e}")
 
 
-def checksum_file(filename: str) -> str:
+def get_checksum(filename: str) -> str:
     hash_func = hashlib.new("sha256")
     with open(filename, "rb") as file:
         for chunk in iter(lambda: file.read(8192), b""):
@@ -104,17 +105,61 @@ def checksum_file(filename: str) -> str:
     return hash_func.hexdigest()
 
 
+def download_file_from_s3(
+    local_filename: str, bucket_name: str = "tdouglas-data-prod-useast2"
+):
+    try:
+        # Download file from S3
+        s3_path = (
+            f"s3://{bucket_name}/data/raw/openpowerlifting/lifter/checksum.json"
+        )
+        wr.s3.download(s3_path, local_filename)
+        print(f"File {s3_path} downloaded to: {local_filename}")
+    except Exception as e:
+        print(f"An error occurred when downloading the file from S3: {e}")
+
+
+def compare_checksum(parquet_filename, checksum, log_filename):
+    key = os.path.basename(parquet_filename)
+    with open(log_filename, "r") as f:
+        log = json.load(f)
+    if key in log:
+        if checksum == log[key]:
+            print("Checksum exists in log")
+            return False 
+        else:
+            pass
+    else:
+        pass
+    log.update({key: checksum})
+    with open(log_filename, "w") as g:
+        json.dump(log, g, indent=4)
+    print("Checksum added to log")
+    return True
+
 def main():
+    log_filename = os.path.join(os.getcwd(), "data", "temp", "checksum.json")
     zip_filename = os.path.join(
         os.getcwd(), "data", "temp", "openpowerlifting-latest.zip"
     )
-    download_data_opl_lifter(zip_filename)
-    data_temp_filename = extract_data_opl_lifter(zip_filename)
-    download_timestamp = pd.Timestamp.utcnow()
-    add_metadata_columns(data_temp_filename, download_timestamp)
-    parquet_filename = convert_csv_to_parquet(data_temp_filename)
-    # upload_file_to_s3(parquet_filename)
 
+    download_zip_opl_lifter(zip_filename)
+    data_filename = extract_data_opl_lifter(zip_filename)
+    download_timestamp = pd.Timestamp.utcnow()
+    add_metadata_columns(data_filename, download_timestamp)
+    parquet_filename = convert_csv_to_parquet(data_filename)
+    upload_file_to_s3(parquet_filename)
+
+    
+    # This is supposed to use the checksum to compare the data already uploaded to S3 and abort the processing/upload if so.
+    # However this is not working, the checksum changes for the same named file downloaded twice in quick succession.
+    # checksum = get_checksum(data_filename)
+    # proceed_with_upload = compare_checksum(parquet_filename, checksum, log_filename)
+    # if proceed_with_upload:
+    #     upload_file_to_s3(parquet_filename)
+    #     upload_file_to_s3(log_filename)
+    # else:
+    #     print(f"Downloaded data already exists in S3 location")
 
 if __name__ == "__main__":
     main()
