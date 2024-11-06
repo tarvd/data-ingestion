@@ -1,6 +1,7 @@
 import os
 import hashlib
 import json
+import logging
 from zipfile import ZipFile
 
 import requests
@@ -27,7 +28,7 @@ def download_zip_opl_lifter(
     print(f"Archive saved to: {zip_file}")
 
 
-def extract_data_opl_lifter(zip_file: str, ) -> str:
+def extract_data_opl_lifter(zip_file: str, ):
     with ZipFile(zip_file, "r") as z:
         # Find the data file in the archive
         data_archive_file = [
@@ -48,7 +49,6 @@ def extract_data_opl_lifter(zip_file: str, ) -> str:
                         break
                     f.write(chunk)
     print(f"Data extracted to: {data_file}")
-    return data_file
 
 
 def add_metadata_columns(data_file: str, download_timestamp: pd.Timestamp = None) -> None:
@@ -81,75 +81,42 @@ def convert_csv_to_parquet(data_file: str, parquet_file: str) -> None:
     print(f"Data converted and saved to: {parquet_file}")
 
 
-def upload_file_to_s3(
-    local_filename: str, bucket_name: str = "tdouglas-data-prod-useast2"
-) -> None:
-    try:
-        # Upload file to S3
-        local_basename = os.path.basename(local_filename)
-        s3_path = (
-            f"s3://{bucket_name}/data/raw/openpowerlifting/lifter/{local_basename}"
-        )
-        print(f"File {local_filename} uploaded to {s3_path}")
-    except Exception as e:
-        print(f"An error occurred when uploading the file to S3: {e}")
-
-
-def get_checksum(filename: str) -> str:
+def get_checksum(file: str) -> str:
     hash_func = hashlib.new("sha256")
-    with open(filename, "rb") as file:
-        for chunk in iter(lambda: file.read(8192), b""):
+    with open(file, "rb") as f:
+        for chunk in iter(lambda: f.read(8192), b""):
             hash_func.update(chunk)
     return hash_func.hexdigest()
 
-
-def compare_checksum_to_log(parquet_file, checksum, log_filename):
-    key = os.path.basename(parquet_file)
-    with open(log_filename, "r") as f:
-        log = json.load(f)
-    if key in log:
-        if checksum == log[key]:
-            print("Checksum exists in log")
-            return False 
-        else:
-            pass
-    else:
-        pass
-    log.update({key: checksum})
-    with open(log_filename, "w") as g:
-        json.dump(log, g, indent=4)
-    print("Checksum added to log")
-    return True
-
 def main():
+    log_file = "logfile.log"
+    logging.basicConfig(
+                    filename=log_file,
+                    level=logging.INFO,
+                    format='%(asctime)s - %(message)s', 
+                    datefmt='%Y-%m-%d %H:%M:%S') 
+    
     zip_file = os.path.join(
         os.getcwd(), "data", "temp", "openpowerlifting-latest.zip"
     )
+    download_zip_opl_lifter(zip_file)
+    checksum = get_checksum(zip_file)[:32]    
     data_file = os.path.join(
-        os.getcwd(), "data", "temp", "lifter-2024-11-02-7378b3ce.csv"
+        os.getcwd(), "data", "temp", f"lifter-{pd.Timestamp.utcnow().strftime("%Y%m%d")}-{checksum}.csv"
     )
-    parquet_file = os.path.join(
-        os.getcwd(), "data", "temp", "lifter-2024-11-02-7378b3ce.parquet"
-    )
-    s3_path = f"s3://tdouglas-data-prod-useast2/data/raw/openpowerlifting/lifter/lifter-2024-11-02-7378b3ce.parquet"
+    parquet_file = data_file.replace(".csv", ".parquet")
+    s3_path = f"s3://tdouglas-data-prod-useast2/data/raw/openpowerlifting/lifter/{os.path.basename(parquet_file)}"
+    logging.info(f"{zip_file}, {checksum}")
 
-    # download_zip_opl_lifter(zip_file)
-    data_file = extract_data_opl_lifter(zip_file)
-    add_metadata_columns(data_file, download_timestamp=pd.Timestamp.utcnow())
-    convert_csv_to_parquet(data_file, parquet_file)
-    wr.s3.upload(parquet_file, s3_path)
-    print(f"Data uploaded to: {s3_path}")
-
-    
-    # This is supposed to use the checksum to compare the data already uploaded to S3 and abort the processing/upload if so.
-    # However this is not working, the checksum changes for the same named file downloaded twice in quick succession.
-    # checksum = get_checksum(data_filename)
-    # proceed_with_upload = compare_checksum(parquet_file, checksum, log_filename)
-    # if proceed_with_upload:
-    #     upload_file_to_s3(parquet_file)
-    #     upload_file_to_s3(log_filename)
-    # else:
-    #     print(f"Downloaded data already exists in S3 location")
+    if wr.s3.does_object_exist(s3_path):
+        print(f"File already exists on S3: {s3_path}")
+    else:
+        extract_data_opl_lifter(zip_file)
+        add_metadata_columns(data_file, download_timestamp=pd.Timestamp.utcnow())
+        convert_csv_to_parquet(data_file, parquet_file)
+        wr.s3.upload(parquet_file, s3_path)
+        print(f"Data uploaded to: {s3_path}")
+        
 
 if __name__ == "__main__":
     main()
