@@ -1,5 +1,6 @@
 import os
 import datetime
+import hashlib
 from zipfile import ZipFile
 
 import requests
@@ -7,11 +8,9 @@ import pandas as pd
 import awswrangler as wr
 
 
-def download_data_openpowerlifting_lifter(
-    url: str = "https://openpowerlifting.gitlab.io/opl-csv/files/openpowerlifting-latest.zip",
-    zip_filename: str = os.path.join(
-        os.getcwd(), "data", "temp", "openpowerlifting-latest.zip"
-    )
+def download_data_opl_lifter(
+    zip_filename: str,
+    url: str = "https://openpowerlifting.gitlab.io/opl-csv/files/openpowerlifting-latest.zip"
 ) -> str:
     try:
         # Get a response from the url
@@ -21,14 +20,19 @@ def download_data_openpowerlifting_lifter(
         print(f"An error occurred when connecting to the website: {e}")
 
     try:
-        # Save the response as an archive file
-        download_timestamp = pd.Timestamp.utcnow()
-        with open(zip_filename, "wb") as file:
-            file.write(response.content)
+        # Save the response as an archive
+        with open(zip_filename, 'wb') as file:
+            for chunk in response.iter_content(chunk_size=8192):
+                if chunk:
+                    file.write(chunk)
         print(f"Archive saved to: {zip_filename}")
     except Exception as e:
         print(f"An error occurred when downloading the archive file: {e}")
 
+
+def extract_data_opl_lifter(
+    zip_filename: str
+) -> str:
     try:
         # Extract the data file from the archive file
         with ZipFile(zip_filename, "r") as z:
@@ -42,8 +46,8 @@ def download_data_openpowerlifting_lifter(
             data_temp_filename = os.path.join(os.getcwd(), "data", "temp", data_basename)
             with open(data_temp_filename, "wb") as f:
                 f.write(z.read(data_filename_in_archive))
-                print(f"Data extracted to: {data_temp_filename}")
-                return (data_temp_filename, download_timestamp)
+            print(f"Data extracted to: {data_temp_filename}")
+            return data_temp_filename
     except Exception as e:
         print(
             f"An error occurred when extracting the data file from the archive file: {e}"
@@ -54,10 +58,12 @@ def parse_data_file_to_csv(
     data_temp_filename: str, download_timestamp: pd.Timestamp = None
 ) -> str:
     try:
-        # Add downloaded_at column and save to csv
+        # Add metadata columns and save to csv
         df = pd.read_csv(data_temp_filename, dtype=str)
         df["downloaded_at"] = download_timestamp
         print(f"Column added to the data: downloaded_at")
+        df["created_date"] = download_timestamp.strftime("%Y%m%d")
+        print(f"Column added to the data: created_date")
         csv_basename = os.path.basename(data_temp_filename)
         csv_filename = os.path.join(
             os.getcwd(), "data", "raw", "openpowerlifting", "lifter", csv_basename
@@ -73,7 +79,7 @@ def parse_data_file_to_parquet(
     data_temp_filename: str, download_timestamp: pd.Timestamp = None
 ) -> str:
     try:
-        # Add downloaded_at column and save to parquet
+        # Add metadata columns and save to parquet
         df = pd.read_csv(data_temp_filename, dtype=str)
         df["downloaded_at"] = download_timestamp
         print(f"Column added to the data: downloaded_at")
@@ -116,9 +122,12 @@ def checksum_file(
     return hash_func.hexdigest()
 
 def main():
-    (data_temp_filename, download_timestamp) = download_data_openpowerlifting_lifter()
-    # csv_filename = parse_data_file_to_csv(data_temp_filename, download_timestamp)
-    # upload_file_to_s3(csv_filename)
+    zip_filename = os.path.join(
+        os.getcwd(), "data", "temp", "openpowerlifting-latest.zip"
+    )
+    download_data_opl_lifter(zip_filename)
+    download_timestamp = pd.Timestamp.utcnow()
+    data_temp_filename = extract_data_opl_lifter(zip_filename)
     parquet_filename = parse_data_file_to_parquet(data_temp_filename, download_timestamp)
     upload_file_to_s3(parquet_filename)
 
