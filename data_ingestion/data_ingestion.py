@@ -10,6 +10,13 @@ import awswrangler as wr
 import pyarrow as pa
 
 
+def get_checksum(file: str) -> str:
+    hash_func = hashlib.new("sha256")
+    with open(file, "rb") as f:
+        for chunk in iter(lambda: f.read(8192), b""):
+            hash_func.update(chunk)
+    return hash_func.hexdigest()
+
 def download_zip_opl_lifter(
     url: str,
     zip_file: str 
@@ -27,62 +34,6 @@ def download_zip_opl_lifter(
             if chunk:
                 file.write(chunk)
     print(f"Archive saved to: {zip_file}")
-
-
-def _extract_data_opl_lifter(
-    zip_file: str,
-    data_file: str
-) -> None:
-    with ZipFile(zip_file, "r") as z:
-        # Find the data file in the archive
-        data_archive_file = [
-            x for x in z.namelist() if os.path.splitext(x)[-1] == ".csv"
-        ][0]
-        print(f"Data found at: $archive/{data_archive_file}")
-        
-        # Extract the data file
-        with z.open(data_archive_file, "r") as csv_in_zip:
-            with open(data_file, "wb") as f:
-                while True:
-                    chunk = csv_in_zip.read(8192)
-                    if not chunk:
-                        break
-                    f.write(chunk)
-    print(f"Data extracted to: {data_file}")
-
-
-def _add_metadata_columns(
-    data_file: str, download_timestamp: pd.Timestamp = None
-) -> None:
-    # Add metadata columns
-    output_file = data_file.replace(".csv", "_modified.csv")
-    chunk_iter = pd.read_csv(data_file, dtype=str, chunksize=300000)
-    for chunk in chunk_iter:
-        chunk["downloaded_at"] = download_timestamp
-        chunk["created_date"] = download_timestamp.strftime("%Y%m%d")
-        chunk.to_csv(output_file, mode="a", index=False)
-
-    # Replace the old file with the new one
-    os.remove(data_file)
-    os.rename(output_file, data_file)
-    print(f"Modified data in: {data_file}")
-    print(f"Column added to the data: downloaded_at")
-    print(f"Column added to the data: created_date")
-
-
-def _convert_csv_to_parquet(data_file: str, parquet_file: str) -> None:
-    # Convert to parquet format
-    df = pd.read_csv(data_file, dtype=str)
-    df.to_parquet(parquet_file, index=False)
-    print(f"Data converted and saved to: {parquet_file}")
-
-
-def get_checksum(file: str) -> str:
-    hash_func = hashlib.new("sha256")
-    with open(file, "rb") as f:
-        for chunk in iter(lambda: f.read(8192), b""):
-            hash_func.update(chunk)
-    return hash_func.hexdigest()
 
 def upload_to_s3_opl_lifter(zip_file: str, s3_path: str) -> None:
     with ZipFile(zip_file, "r") as z:
