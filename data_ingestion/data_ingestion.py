@@ -106,6 +106,14 @@ def upload_file_to_s3(
     except Exception as e:
         print(f"An error occurred when uploading the file to S3: {e}")
 
+def checksum_file(
+    filename: str
+) -> str:
+    hash_func = hashlib.new("sha256")
+    with open(filename, "rb") as file:
+        for chunk in iter(lambda: file.read(8192), b""):
+            hash_func.update(chunk)
+    return hash_func.hexdigest()
 
 def main():
     (data_temp_filename, download_timestamp) = download_data_openpowerlifting_lifter()
