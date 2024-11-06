@@ -29,7 +29,7 @@ def download_zip_opl_lifter(
     print(f"Archive saved to: {zip_file}")
 
 
-def extract_data_opl_lifter(
+def _extract_data_opl_lifter(
     zip_file: str,
     data_file: str
 ) -> None:
@@ -51,7 +51,7 @@ def extract_data_opl_lifter(
     print(f"Data extracted to: {data_file}")
 
 
-def add_metadata_columns(
+def _add_metadata_columns(
     data_file: str, download_timestamp: pd.Timestamp = None
 ) -> None:
     # Add metadata columns
@@ -70,15 +70,10 @@ def add_metadata_columns(
     print(f"Column added to the data: created_date")
 
 
-def convert_csv_to_parquet_old(data_file: str, parquet_file: str) -> None:
+def _convert_csv_to_parquet(data_file: str, parquet_file: str) -> None:
     # Convert to parquet format
     df = pd.read_csv(data_file, dtype=str)
     df.to_parquet(parquet_file, index=False)
-    print(f"Data converted and saved to: {parquet_file}")
-
-def convert_csv_to_parquet(data_file: str, parquet_file: str) -> None:
-    # Convert to parquet format
-    pa
     print(f"Data converted and saved to: {parquet_file}")
 
 
@@ -89,6 +84,25 @@ def get_checksum(file: str) -> str:
             hash_func.update(chunk)
     return hash_func.hexdigest()
 
+def upload_to_s3_opl_lifter(zip_file: str, s3_path: str) -> None:
+    with ZipFile(zip_file, "r") as z:
+        # Find the data file in the archive
+        data_archive_file = [
+            x for x in z.namelist() if os.path.splitext(x)[-1] == ".csv"
+        ][0]
+        print(f"Data found at: $archive/{data_archive_file}")
+        
+        # Stream data file to S3 in parquet format
+        with z.open(data_archive_file, "r") as csv_in_zip:
+            chunk_iter = pd.read_csv(csv_in_zip, dtype=str, chunksize=100000)
+            for chunk in chunk_iter:
+                wr.s3.to_parquet(
+                df=chunk,
+                dataset=True,
+                path=s3_path,
+                mode='append'
+            )
+    print(f"Data uploaded to: {s3_path}")
 
 def main():
     log_file = "logfile.log"
@@ -104,24 +118,18 @@ def main():
     logging.info(f"Program started with url={url} and zip_file={zip_file}")
     download_zip_opl_lifter(url, zip_file)
     checksum = get_checksum(zip_file)[:32]
-    data_file = os.path.join(os.getcwd(), "data", "temp", f"lifter-{checksum}.csv")
-    parquet_file = data_file.replace(".csv", ".parquet")
-    s3_path = f"s3://tdouglas-data-prod-useast2/data/raw/openpowerlifting/lifter/{os.path.basename(parquet_file)}"
-    
+    s3_path = f"s3://tdouglas-data-prod-useast2/data/raw/openpowerlifting/lifter/lifter-{checksum}-test.parquet"
     logging.info(f"s3_path={s3_path}, checksum={checksum}")
 
-    # if wr.s3.does_object_exist(s3_path):
-    if 1 == 2:
+    if wr.s3.does_object_exist(s3_path):
+    # if 1 == 2:
         print(f"File already exists on S3: {s3_path}")
         logging.info(f"Program ended after finding an S3 object at {s3_path}")
         sys.exit()
     else:
-        extract_data_opl_lifter(zip_file, data_file)
-        add_metadata_columns(data_file, download_timestamp=pd.Timestamp.utcnow())
-        convert_csv_to_parquet(data_file, parquet_file)
-        # wr.s3.upload(parquet_file, s3_path)
-        # print(f"Data uploaded to: {s3_path}")
-        # logging.info(f"S3 object uploaded at {s3_path}")
+        upload_to_s3_opl_lifter(zip_file, s3_path)
+        print(f"Data uploaded to: {s3_path}")
+        logging.info(f"S3 object uploaded at {s3_path}")
 
 
 if __name__ == "__main__":
