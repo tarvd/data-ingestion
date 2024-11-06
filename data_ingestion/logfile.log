@@ -1,2 +1,28 @@
 2024-11-06 00:21:59 - C:\Users\tedwa\Poetry Projects\data-ingestion\data_ingestion\data\temp\openpowerlifting-latest.zip, a70e47cd995bcfc892b467e394c95d88270c1ba5e575db70c80bb145850f0568
 2024-11-06 00:22:27 - C:\Users\tedwa\Poetry Projects\data-ingestion\data_ingestion\data\temp\openpowerlifting-latest.zip, a70e47cd995bcfc892b467e394c95d88270c1ba5e575db70c80bb145850f0568
+2024-11-06 00:42:11 - C:\Users\tedwa\Poetry Projects\data-ingestion\data_ingestion\data\temp\openpowerlifting-latest.zip, a70e47cd995bcfc892b467e394c95d88
+2024-11-06 00:42:11 - Found credentials in shared credentials file: ~/.aws/credentials
+2024-11-06 00:43:30 - C:\Users\tedwa\Poetry Projects\data-ingestion\data_ingestion\data\temp\openpowerlifting-latest.zip, a70e47cd995bcfc892b467e394c95d88
+2024-11-06 00:43:30 - Found credentials in shared credentials file: ~/.aws/credentials
+2024-11-06 00:49:09 - s3_path=s3://tdouglas-data-prod-useast2/data/raw/openpowerlifting/lifter/lifter-20241106-a70e47cd995bcfc892b467e394c95d88.parquet, checksum=a70e47cd995bcfc892b467e394c95d88
+2024-11-06 00:49:09 - Found credentials in shared credentials file: ~/.aws/credentials
+2024-11-06 00:50:53 - Found credentials in shared credentials file: ~/.aws/credentials
+2024-11-06 00:53:04 - Program started with url=https://openpowerlifting.gitlab.io/opl-csv/files/openpowerlifting-latest.zip and zip_file=C:\Users\tedwa\Poetry Projects\data-ingestion\data_ingestion\data\temp\openpowerlifting-latest.zip
+2024-11-06 00:53:07 - s3_path=s3://tdouglas-data-prod-useast2/data/raw/openpowerlifting/lifter/lifter-20241106-a70e47cd995bcfc892b467e394c95d88.parquet, checksum=a70e47cd995bcfc892b467e394c95d88
+2024-11-06 00:53:07 - Found credentials in shared credentials file: ~/.aws/credentials
+2024-11-06 00:53:08 - Program ended after finding an S3 object at s3://tdouglas-data-prod-useast2/data/raw/openpowerlifting/lifter/lifter-20241106-a70e47cd995bcfc892b467e394c95d88.parquet
+2024-11-06 00:53:26 - Program started with url=https://openpowerlifting.gitlab.io/opl-csv/files/openpowerlifting-latest.zip and zip_file=C:\Users\tedwa\Poetry Projects\data-ingestion\data_ingestion\data\temp\openpowerlifting-latest.zip
+2024-11-06 00:53:29 - s3_path=s3://tdouglas-data-prod-useast2/data/raw/openpowerlifting/lifter/lifter-20241106-a70e47cd995bcfc892b467e394c95d88.parquet, checksum=a70e47cd995bcfc892b467e394c95d88
+2024-11-06 00:53:29 - Found credentials in shared credentials file: ~/.aws/credentials
+2024-11-06 00:53:30 - Program ended after finding an S3 object at s3://tdouglas-data-prod-useast2/data/raw/openpowerlifting/lifter/lifter-20241106-a70e47cd995bcfc892b467e394c95d88.parquet
+2024-11-06 00:55:11 - Program started with url=https://openpowerlifting.gitlab.io/opl-csv/files/openpowerlifting-latest.zip and zip_file=C:\Users\tedwa\Poetry Projects\data-ingestion\data_ingestion\data\temp\openpowerlifting-latest.zip
+2024-11-06 00:55:15 - s3_path=s3://tdouglas-data-prod-useast2/data/raw/openpowerlifting/lifter/lifter-a70e47cd995bcfc892b467e394c95d88.parquet, checksum=a70e47cd995bcfc892b467e394c95d88
+2024-11-06 00:55:15 - Found credentials in shared credentials file: ~/.aws/credentials
+2024-11-06 00:56:57 - Found credentials in shared credentials file: ~/.aws/credentials
+2024-11-06 00:57:02 - S3 object uploaded at s3://tdouglas-data-prod-useast2/data/raw/openpowerlifting/lifter/lifter-a70e47cd995bcfc892b467e394c95d88.parquet
+2024-11-06 00:57:46 - Program started with url=https://openpowerlifting.gitlab.io/opl-csv/files/openpowerlifting-latest.zip and zip_file=C:\Users\tedwa\Poetry Projects\data-ingestion\data_ingestion\data\temp\openpowerlifting-latest.zip
+2024-11-06 00:57:49 - s3_path=s3://tdouglas-data-prod-useast2/data/raw/openpowerlifting/lifter/lifter-a70e47cd995bcfc892b467e394c95d88.parquet, checksum=a70e47cd995bcfc892b467e394c95d88
+2024-11-06 00:57:49 - Found credentials in shared credentials file: ~/.aws/credentials
+2024-11-06 00:57:50 - Program ended after finding an S3 object at s3://tdouglas-data-prod-useast2/data/raw/openpowerlifting/lifter/lifter-a70e47cd995bcfc892b467e394c95d88.parquet
+2024-11-06 01:34:28 - Program started with url=https://openpowerlifting.gitlab.io/opl-csv/files/openpowerlifting-latest.zip and zip_file=C:\Users\tedwa\Poetry Projects\data-ingestion\data_ingestion\data\temp\openpowerlifting-latest.zip
+2024-11-06 01:34:31 - s3_path=s3://tdouglas-data-prod-useast2/data/raw/openpowerlifting/lifter/lifter-a70e47cd995bcfc892b467e394c95d88.parquet, checksum=a70e47cd995bcfc892b467e394c95d88
